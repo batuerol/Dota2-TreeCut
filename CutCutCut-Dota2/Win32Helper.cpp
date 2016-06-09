@@ -57,14 +57,18 @@ HFONT Win32MakeFont(const char* fontName, int height, int weight, BOOL italic, B
 	return CreateFont(height, 0, 0, 0, weight, italic, underline, strike, charSet, OUT_STROKE_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE, fontName);
 }
 
-HWND Win32CreateWindow(HINSTANCE hInstance, const WNDCLASSEX &wndClass, const DWORD& styleEx, const DWORD &style, const char* Title,
+HWND Win32CreateWindow(HINSTANCE hInstance, WNDCLASSEX &wndClass, const DWORD& styleEx, const DWORD &style, const char* Title,
 	int Width, int Height, int X, int Y,
 	HWND Parent, LPVOID lpParam)
 {
-	if (RegisterClassExA(&wndClass) == 0)
+	// TODO(batuhan): Maybe unregister and re-register for the changes in window class?
+	if (!GetClassInfoEx(hInstance, wndClass.lpszClassName, &wndClass))
 	{
-		OutputDebugStringA("RegisterClassEx is an ass. GabeN\n");
-		return NULL;
+		if (RegisterClassEx(&wndClass) == 0)
+		{
+			OutputDebugStringA("RegisterClassEx is an ass. GabeN\n");
+			return NULL;
+		}
 	}
 
 	HWND hWnd = CreateWindowEx(
