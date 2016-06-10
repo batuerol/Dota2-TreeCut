@@ -125,12 +125,6 @@ LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 		} break;
 
-		case WM_KILLFOCUS:
-		{
-			//DestroyWindow(hWnd);
-			PostQuitMessage(0);
-		} break;
-
 		case WM_CLOSE:
 		{
 			DestroyWindow(hWnd);
