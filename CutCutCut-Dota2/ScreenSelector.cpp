@@ -44,7 +44,7 @@ LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			SelectObject(state->Selection.hDeviceContext, CreatePen(PS_SOLID, 1, RGB(255, 0, 0)));
 			SetROP2(state->Selection.hDeviceContext, R2_NOT);
 			//SelectObject(state->Selection.hDeviceContext, (HBRUSH)GetStockObject(NULL_BRUSH));
-			SetTextColor(state->Selection.hDeviceContext, (COLORREF)RGB(0, 0, 0));
+			SetTextColor(state->Selection.hDeviceContext, (COLORREF)RGB(0, 102, 0));
 			SetTextAlign(state->Selection.hDeviceContext, TA_CENTER);
 			SetBkMode(state->Selection.hDeviceContext, TRANSPARENT);
 		} break;
@@ -67,7 +67,7 @@ LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				
 				// TODO(batuhan): Wrap these around a function; change font, color, etc.
 				// TODO(batuhan): Multi-line
-				// TODO(batuhan): Make it more readable. 
+				// TODO(batuhan): Make the text more readable. Add a background-color(black?) with alpha blending?
 				int centerX = state->Selection.Rect.left + (state->Selection.Rect.right - state->Selection.Rect.left) / 2;
 				int centerY = state->Selection.Rect.top + (state->Selection.Rect.bottom - state->Selection.Rect.top) / 2;
 				ExtTextOut(state->Selection.hDeviceContext, centerX, centerY, ETO_CLIPPED, &state->Selection.Rect, message, strlen(message), NULL);
