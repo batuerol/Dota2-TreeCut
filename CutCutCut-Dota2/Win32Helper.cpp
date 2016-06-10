@@ -87,3 +87,12 @@ HHOOK Win32CreateKeyboardHook(const HOOKPROC &hookProc)
 {
 	return SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, 0, 0);
 }
+
+bool Win32RegisterCloseHook(HWND hWnd, WAITORTIMERCALLBACK callback, HANDLE *waitHandle)
+{
+	DWORD id;
+	GetWindowThreadProcessId(hWnd, &id);
+	HANDLE hProcess = OpenProcess(SYNCHRONIZE, FALSE, id);
+
+	return RegisterWaitForSingleObject(waitHandle, hProcess, callback, NULL, INFINITE, WT_EXECUTEONLYONCE) != 0;
+}
