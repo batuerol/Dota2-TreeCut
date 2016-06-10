@@ -29,7 +29,6 @@ void CleanUp(const MyDev& dev)
 	}
 }
 
-// TODO(batuhan): You can still exit just by simply changing focus(Alt-tab for example). 
 LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LRESULT result = 0;
@@ -81,6 +80,11 @@ LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 				EndPaint(hWnd, &ps);
 			}
+		} break;
+
+		case WM_KILLFOCUS:
+		{
+			DestroyWindow(hWnd);
 		} break;
 
 		case WM_ERASEBKGND:
@@ -147,7 +151,7 @@ LRESULT CALLBACK SelectionProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 bool GetScreenSelection(HINSTANCE hInstance, RECT *rcSelection, HWND target)
 {
 	char* szClassName = "SelectionClass";
-	DWORD style = WS_POPUP | WS_EX_TOPMOST | WS_VISIBLE;
+	DWORD style = WS_POPUP | WS_EX_TOPMOST;// | WS_VISIBLE;
 	DWORD styleEx = WS_EX_TOOLWINDOW;
 	WNDCLASSEX wcex = { 0 };
 	wcex.cbSize = sizeof(WNDCLASSEX);
@@ -158,9 +162,13 @@ bool GetScreenSelection(HINSTANCE hInstance, RECT *rcSelection, HWND target)
 	wcex.lpszClassName = szClassName;
 
 	SelectionState state = { 0 };
+	state.Result = FALSE;
 
 	HDC hDeviceContext = GetDC(target);
-	GetClientRect(target, &state.Window.Rect);
+	if (!GetClientRect(target, &state.Window.Rect))
+	{
+		goto cleanup;
+	}
 
 	state.Window.hBitmap = CreateCompatibleBitmap(hDeviceContext, state.Window.Rect.right, state.Window.Rect.bottom);
 	if (!state.Window.hBitmap)
@@ -199,6 +207,9 @@ bool GetScreenSelection(HINSTANCE hInstance, RECT *rcSelection, HWND target)
 
 	SetForegroundWindow(target);
 	SetForegroundWindow(hWndSelect);
+
+	ShowWindow(hWndSelect, SW_SHOW);
+	UpdateWindow(hWndSelect);
 
 	MSG msg;
 	state.Wait = TRUE;
