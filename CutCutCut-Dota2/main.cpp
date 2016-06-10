@@ -96,7 +96,7 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				hWnd, NULL,
 				g_hInstance,
 				NULL);
-			
+			SendMessage(dotaStatus, STM_SETIMAGE, IMAGE_ICON, (LPARAM)hIcDotaNo);
 
 			HWND toggleCut = CreateWindowEx(
 				NULL,
@@ -119,8 +119,7 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				100, 20,
 				hWnd, (HMENU)IDC_AREASELECT,
 				g_hInstance, NULL);
-			SendMessage(changeArea, WM_SETTEXT, 0, (LPARAM)"Area Select");
-
+			SendMessage(changeArea, WM_SETTEXT, 0, (LPARAM)"Area Select");			
 		} break;
 
 		case WM_UPDATE_DOTA_STATUS:
