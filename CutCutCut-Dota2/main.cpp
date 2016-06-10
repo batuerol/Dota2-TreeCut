@@ -12,15 +12,17 @@
 #include "Win32Helper.h"
 #include "ScreenSelector.h"
 
+#define WM_UPDATE_DOTA_STATUS (WM_USER + 0x0001)
+
 //TODO(batuhan): Wrap process searcher in a class...
 //TODO(batuhan): g_Running needs to be guarded. Since thread(s) depends on it.
-//TODO(batuhan): Keyboard hook lags the whole system. Probaby because of g_Running. DEBUG
 
 static const char* g_szTargetWindow = "Dota 2";
 static bool g_Running = true;
 static bool g_Cut = false;
 
 static HINSTANCE g_hInstance;
+static HWND g_hWndMain = NULL;
 static HANDLE g_hWait = NULL;
 static HWND g_hWndDota = NULL;
 
@@ -36,7 +38,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 	if (wParam == WM_KEYUP)
 	{
 		if (kbStruct->vkCode == VK_F10)
-		{
+		{			
 			g_Running = false;
 			std::cout << "TRIGGERED" << std::endl;
 		}
@@ -52,14 +54,16 @@ VOID CALLBACK WaitOrTimerCallback(PVOID lpParam, BOOLEAN timerOrWaitFired)
 {
 	std::lock_guard<std::mutex> lock(g_WaitProcessMutex);
 	g_hWndDota = NULL;
+	SendMessage(g_hWndMain, WM_UPDATE_DOTA_STATUS, 0, 0);
 	g_WaitProcessCV.notify_one();
 }
 
 LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LRESULT result = 0;
-	static HICON hIcDotaOk = (HICON)LoadImage(g_hInstance, "..\\res\\seemsgood.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED);
-	static HICON hIcDotaNo = (HICON)LoadImage(g_hInstance, "..\\res\\biblethump.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED);
+	static HICON hIcDotaOk = (HICON)LoadImage(g_hInstance, "..\\res\\seemsgood.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_LOADTRANSPARENT | LR_DEFAULTSIZE | LR_SHARED);
+	static HICON hIcDotaNo = (HICON)LoadImage(g_hInstance, "..\\res\\biblethump.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_LOADTRANSPARENT | LR_DEFAULTSIZE | LR_SHARED);
+	static HWND dotaStatus;
 
 	switch (uMsg)
 	{
@@ -82,7 +86,7 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			//SendMessage(text, WM_SETFONT, (WPARAM)font, 0);
 			SendMessage(text, WM_SETTEXT, 0, (LPARAM)"Dota status:");
 
-			HWND dotaStatus = CreateWindowEx(
+			dotaStatus = CreateWindowEx(
 				NULL,
 				WC_STATIC,
 				"",
@@ -92,8 +96,7 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				hWnd, NULL,
 				g_hInstance,
 				NULL);
-
-			SendMessage(dotaStatus, STM_SETIMAGE, IMAGE_ICON, (WPARAM)hIcDotaOk);
+			
 
 			HWND toggleCut = CreateWindowEx(
 				NULL,
@@ -111,13 +114,21 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				NULL,
 				WC_BUTTON,
 				"",
-				WS_CHILD | WS_VISIBLE | SS_CENTER,
+				WS_CHILD | WS_VISIBLE | SS_CENTER ,
 				rcClient.left + 10, rcClient.top + 100,
 				100, 20,
 				hWnd, (HMENU)IDC_AREASELECT,
 				g_hInstance, NULL);
 			SendMessage(changeArea, WM_SETTEXT, 0, (LPARAM)"Area Select");
 
+		} break;
+
+		case WM_UPDATE_DOTA_STATUS:
+		{
+			if (g_hWndDota == NULL)
+				SendMessage(dotaStatus, STM_SETIMAGE, IMAGE_ICON, (LPARAM)hIcDotaNo);
+			else
+				SendMessage(dotaStatus, STM_SETIMAGE, IMAGE_ICON, (LPARAM)hIcDotaOk);			
 		} break;
 
 		case WM_CTLCOLORSTATIC:
@@ -132,7 +143,7 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			if (LOWORD(wParam) == IDC_AREASELECT)
 			{
 				RECT rect = { 0 };
-				//if (GetScreenSelection(g_hInstance, &rect, g_hWndDota))
+				if (GetScreenSelection(g_hInstance, &rect, g_hWndDota))
 				{
 					CHAR szText[128];
 					wsprintf(szText, "(%d, %d) - (%d, %d)", rect.left, rect.top, rect.right, rect.bottom);
@@ -216,6 +227,7 @@ void SearchDota()
 			{
 				Win32RegisterCloseHook(g_hWndDota, WaitOrTimerCallback, &g_hWait);
 			}
+			SendMessage(g_hWndMain, WM_UPDATE_DOTA_STATUS, 0, 0);
 			lock.unlock();
 			g_WaitProcessCV.notify_one();
 		}
@@ -238,8 +250,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	mainWndClass.lpfnWndProc = MainWindowProc;
 	DWORD mainStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | !WS_MAXIMIZEBOX | WS_VISIBLE;
 
-	HWND hMainWnd = Win32CreateWindow(hInstance, mainWndClass, 0, mainStyle, "Cut cut cut ccccccuut", 400, 400);
-	if (hMainWnd == 0)
+	g_hWndMain = Win32CreateWindow(hInstance, mainWndClass, 0, mainStyle, "Cut cut cut ccccccuut", 400, 400);
+	if (g_hWndMain == 0)
 	{
 		std::cerr << "Window creation failed. Error code:" << GetLastError() << std::endl;
 		return 1;
@@ -265,7 +277,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	MSG message;
 	while (g_Running)
 	{
-		while (PeekMessage(&message, hMainWnd, 0, 0, PM_REMOVE))
+		while (PeekMessage(&message, g_hWndMain, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&message);
 			DispatchMessage(&message);
